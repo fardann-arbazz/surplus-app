@@ -10,7 +10,7 @@
         <div class="sticky top-0 z-10 bg-base-100/95 backdrop-blur border-b border-base-200 px-4 py-3">
             <div class="flex items-center justify-between">
                 <div class="flex-1 min-w-0">
-                    <h1 class="text-lg font-bold truncate">🍱 Surplus Terdekat</h1>
+                    <h1 class="text-lg font-bold truncate">Surplus Terdekat</h1>
                     <p class="text-xs text-base-content/50 truncate">Makanan segar, harga hemat, selamatkan bumi 🌍</p>
                 </div>
             </div>
