@@ -5,6 +5,7 @@ namespace App\Services\SurplusProduct;
 use App\Models\SurplusProduct;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class SurplusProductService
 {
@@ -78,17 +79,27 @@ class SurplusProductService
 
             // Tidak boleh update jika expired
             if ($this->isExpired($surplus)) {
-                throw new \Exception('Produk sudah kadaluarsa dan tidak bisa diubah.');
+                throw ValidationException::withMessages([
+                    'surplus' => 'Produk sudah kadaluarsa dan tidak bisa diubah.',
+                ]);
             }
+
 
             // Tidak boleh update jika sold out
             if ($surplus->status === 'sold_out') {
-                throw new \Exception('Produk sudah habis dan tidak bisa diubah.');
+                throw ValidationException::withMessages([
+                    'surplus' => 'Produk sudah habis dan tidak bisa diubah.',
+                ]);
             }
 
             // Cegah manipulasi quantity
-            if (isset($data['quantity']) && $data['quantity'] != $surplus->quantity) {
-                throw new \Exception('Quantity tidak boleh diubah setelah dibuat.');
+            if (
+                isset($data['quantity']) &&
+                $data['quantity'] != $surplus->quantity
+            ) {
+                throw ValidationException::withMessages([
+                    'quantity' => 'Quantity tidak boleh diubah setelah dibuat.',
+                ]);
             }
 
             // Update field yang boleh
@@ -115,12 +126,16 @@ class SurplusProductService
 
             // Tidak boleh delete jika sold out
             if ($surplus->status === 'sold_out') {
-                throw new \Exception('Produk sudah habis dan tidak bisa dihapus.');
+                throw ValidationException::withMessages([
+                    'surplus' => 'Produk sudah habis dan tidak bisa dihapus.',
+                ]);
             }
 
             // Tidak boleh delete jika expired
             if ($this->isExpired($surplus)) {
-                throw new \Exception('Produk sudah kadaluarsa dan tidak bisa dihapus.');
+                throw ValidationException::withMessages([
+                    'surplus' => 'Produk sudah kadaluarsa dan tidak bisa dihapus.',
+                ]);
             }
 
             $surplus->delete();
@@ -134,11 +149,15 @@ class SurplusProductService
             $surplus = SurplusProduct::lockForUpdate()->findOrFail($id);
 
             if ($this->isExpired($surplus)) {
-                throw new \Exception('Produk sudah kadaluarsa.');
+                throw ValidationException::withMessages([
+                    'surplus' => 'Produk sudah kadaluarsa.',
+                ]);
             }
 
             if ($surplus->remaining_quantity < $qty) {
-                throw new \Exception('Stok tidak mencukupi.');
+                throw ValidationException::withMessages([
+                    'surplus' => 'Stok tidak mencukupi.',
+                ]);
             }
 
             $surplus->remaining_quantity -= $qty;
@@ -149,6 +168,8 @@ class SurplusProductService
             }
 
             $surplus->save();
+
+            broadcast(new \App\Events\SurplusStatusUpdated($surplus));
 
             return $surplus;
         });

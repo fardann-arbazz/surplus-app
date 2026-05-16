@@ -34,6 +34,11 @@ class Stores extends Model
         return $this->hasMany(Products::class, 'store_id');
     }
 
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Orders::class, 'store_id');
+    }
+
     // accessor modern 
     protected function imageUrl(): Attribute
     {

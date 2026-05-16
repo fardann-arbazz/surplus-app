@@ -47,15 +47,14 @@ class CreateSurplusProductRequest extends FormRequest
 
             'pickup_start_at' => [
                 'required',
-                'date',
+                'date_format:H:i',
                 'before_or_equal:pickup_end_at',
             ],
 
             'pickup_end_at' => [
                 'required',
-                'date',
+                'date_format:H:i',
                 'after_or_equal:pickup_start_at',
-                'before_or_equal:expired_at',
             ],
         ];
     }
@@ -90,13 +89,10 @@ class CreateSurplusProductRequest extends FormRequest
             'expired_at.after_or_equal' => 'Tanggal kadaluarsa tidak boleh sebelum hari ini.',
 
             'pickup_start_at.required' => 'Tanggal mulai pengambilan wajib diisi.',
-            'pickup_start_at.date' => 'Format tanggal mulai tidak valid.',
-            'pickup_start_at.before_or_equal' => 'Tanggal mulai harus sebelum atau sama dengan tanggal selesai.',
+            'pickup_start_at.date_format' => 'Format jam mulai tidak valid.',
 
             'pickup_end_at.required' => 'Tanggal selesai pengambilan wajib diisi.',
-            'pickup_end_at.date' => 'Format tanggal selesai tidak valid.',
-            'pickup_end_at.after_or_equal' => 'Tanggal selesai harus setelah atau sama dengan tanggal mulai.',
-            'pickup_end_at.before_or_equal' => 'Tanggal selesai tidak boleh melebihi tanggal kadaluarsa.',
+            'pickup_end_at.date_format' => 'Format jam selesai tidak valid.',
         ];
     }
 }

@@ -30,7 +30,11 @@
                 </div>
             @endif
 
-
+            @error('surplus')
+                <div class="alert alert-error mb-3">
+                    {{ $message }}
+                </div>
+            @enderror
 
             <!-- Tabs -->
             <div class="flex gap-1 bg-base-100 border border-base-200 shadow-sm rounded-xl p-1 mb-6 w-fit">
@@ -180,8 +184,8 @@
                 @if (isset($surplusMenus) && count($surplusMenus) > 0)
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                         @foreach ($surplusMenus as $surplus)
-                            <div
-                                class="card bg-base-100 border border-warning/30 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
+                            <div class="card bg-base-100 border border-warning/30 shadow-sm hover:shadow-md transition-all group relative"
+                                data-surplus-id="{{ $surplus->id }}">
                                 <!-- Surplus Ribbon -->
                                 <div class="absolute top-0 right-0 z-10">
                                     <div
@@ -254,26 +258,42 @@
                                     <!-- Status -->
                                     <div class="flex items-center justify-between text-xs mb-3">
                                         @if ($surplus->status == 'active')
-                                            <span class="badge badge-success badge-xs gap-1">
+                                            <span class="badge badge-success badge-xs gap-1 surplus-status-badge">
                                                 <span class="w-1 h-1 bg-white rounded-full"></span> Available
                                             </span>
                                         @elseif($surplus->status == 'sold_out')
-                                            <span class="badge badge-error badge-xs">Sold Out</span>
+                                            <span class="badge badge-error badge-xs surplus-status-badge">Sold Out</span>
                                         @else
-                                            <span class="badge badge-ghost badge-xs">Expired</span>
+                                            <span class="badge badge-ghost badge-xs surplus-status-badge">Expired</span>
                                         @endif
+
 
                                         @if ($surplus->pickup_start_at && $surplus->pickup_end_at)
                                             <span class="text-base-content/40">
-                                                🕐 {{ \Carbon\Carbon::parse($surplus->pickup_start_at)->format('H:i') }} -
-                                                {{ \Carbon\Carbon::parse($surplus->pickup_end_at)->format('H:i') }}
+                                                🕐
+                                                {{ \Carbon\Carbon::createFromFormat('H:i:s', $surplus->pickup_start_at)->format('H:i') }}
+                                                -
+                                                {{ \Carbon\Carbon::createFromFormat('H:i:s', $surplus->pickup_end_at)->format('H:i') }}
                                             </span>
                                         @endif
                                     </div>
 
                                     <!-- Card Actions -->
                                     <div class="card-actions justify-end gap-2 pt-2 border-t border-base-200">
-                                        <button onclick="document.getElementById('surplusSlideover').showModal()"
+                                        <button
+                                            onclick="openSurplusEditModal({
+                                                id: {{ $surplus->id }},
+                                                productName: '{{ addslashes($surplus->product->name ?? '') }}',
+                                                image: '{{ $surplus->product->productImg->first()?->img_url ?? 'https://via.placeholder.com/60' }}',
+                                                initialPrice: {{ $surplus->initial_price }},
+                                                discountPrice: {{ $surplus->discount_price }},
+                                                quantity: {{ $surplus->quantity }},
+                                                remainingQuantity: {{ $surplus->remaining_quantity }},
+                                                status: '{{ $surplus->status }}',
+                                                pickupStart: '{{ $surplus->pickup_start_at }}',
+                                                pickupEnd: '{{ $surplus->pickup_end_at }}',
+                                                expiredAt: '{{ $surplus->expired_at }}'
+                                            })"
                                             class="btn btn-ghost btn-xs gap-1">
                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor"
                                                 viewBox="0 0 24 24">
@@ -292,9 +312,16 @@
                                             </label>
                                             <ul tabindex="0"
                                                 class="dropdown-content z-1 menu p-2 shadow-lg bg-base-100 rounded-box w-44 border border-base-200">
-                                                <li><a class="cursor-pointer">🏁 Mark as Sold Out</a></li>
-                                                <div class="divider my-1"></div>
-                                                <li><a class="text-error cursor-pointer">🗑️ Delete</a></li>
+                                                <li>
+                                                    <a onclick="openDeleteSurplusModal({
+                                                            id: {{ $surplus->id }},
+                                                            productName: '{{ addslashes($surplus->product->name ?? '') }}',
+                                                            image: '{{ $surplus->product->productImg->first()?->img_url ?? 'https://via.placeholder.com/60' }}',
+                                                            discountPrice: {{ $surplus->discount_price }},
+                                                            remainingQuantity: {{ $surplus->remaining_quantity }}
+                                                        })"
+                                                        class="text-error cursor-pointer">Delete</a>
+                                                </li>
                                             </ul>
                                         </div>
                                     </div>
@@ -561,6 +588,127 @@
             </div>
         </dialog>
 
+        <!-- ============ UPDATE SURPLUS MODAL ============ -->
+        <dialog id="surplusUpdateSlideover" class="modal modal-bottom sm:modal-middle">
+            <div class="modal-box max-w-lg p-0 overflow-hidden">
+                <!-- Modal Header -->
+                <div class="bg-amber-500 p-5 text-white">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-bold">Update Surplus Deal</h3>
+                        <button type="button" onclick="document.getElementById('surplusUpdateSlideover').close()"
+                            class="btn btn-ghost btn-sm btn-circle text-white">✕</button>
+                    </div>
+                </div>
+
+                <form id="surplusUpdateForm" method="POST" action="">
+                    @csrf
+                    @method('PUT')
+
+                    <div class="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
+
+                        <!-- Selected Food Info (readonly preview) -->
+                        <div class="bg-base-200 rounded-xl p-4 flex items-center gap-3">
+                            <img id="surplusUpdateImage" src="" alt="Food"
+                                class="w-14 h-14 rounded-xl object-cover">
+                            <div>
+                                <p id="surplusUpdateName" class="text-sm font-semibold"></p>
+                                <p class="text-xs text-base-content/50">Original price:
+                                    <span id="surplusUpdatePriceDisplay"></span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Original Price (readonly) -->
+                        <div class="form-control">
+                            <label class="label py-1">
+                                <span class="label-text font-medium text-sm">Original Price</span>
+                            </label>
+                            <input type="text" id="surplusUpdateOriginalPriceDisplay"
+                                class="input input-bordered w-full bg-base-200 text-sm" readonly>
+                            <input type="hidden" name="initial_price" id="surplusUpdateInitialPrice">
+                        </div>
+
+                        <!-- Surplus Price -->
+                        <div class="form-control">
+                            <label class="label py-1">
+                                <span class="label-text font-medium text-sm">Surplus Price (Rp) *</span>
+                            </label>
+                            <input type="number" name="discount_price" id="surplusUpdateCurrentPrice"
+                                class="input input-bordered w-full focus:input-warning text-sm" placeholder="15000"
+                                min="0" required>
+                            <label class="label py-1">
+                                <span class="label-text-alt text-warning">💡 Suggested: 40-60% of original price</span>
+                            </label>
+                        </div>
+
+                        <!-- Quantity & Remaining -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="form-control">
+                                <label class="label py-1">
+                                    <span class="label-text font-medium text-sm">Total Quantity *</span>
+                                </label>
+                                <input type="number" name="quantity" id="surplusUpdateQuantity"
+                                    class="input input-bordered w-full focus:input-warning text-sm" placeholder="10"
+                                    min="1" required>
+                            </div>
+                            <div class="form-control">
+                                <label class="label py-1">
+                                    <span class="label-text font-medium text-sm">Remaining *</span>
+                                </label>
+                                <input type="number" name="remaining_quantity" id="surplusUpdateRemaining"
+                                    class="input input-bordered w-full focus:input-warning text-sm" placeholder="10"
+                                    min="0" required>
+                            </div>
+                        </div>
+
+                        <!-- Pickup Time Range -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="form-control">
+                                <label class="label py-1">
+                                    <span class="label-text font-medium text-sm">Pickup Start *</span>
+                                </label>
+                                <input type="time" name="pickup_start_at" id="surplusUpdatePickupStart"
+                                    class="input input-bordered w-full focus:input-warning text-sm" required>
+                            </div>
+                            <div class="form-control">
+                                <label class="label py-1">
+                                    <span class="label-text font-medium text-sm">Pickup End *</span>
+                                </label>
+                                <input type="time" name="pickup_end_at" id="surplusUpdatePickupEnd"
+                                    class="input input-bordered w-full focus:input-warning text-sm" required>
+                            </div>
+                        </div>
+
+                        <!-- Expiry -->
+                        <div class="form-control">
+                            <label class="label py-1">
+                                <span class="label-text font-medium text-sm">Expiry Date *</span>
+                            </label>
+                            <input type="datetime-local" name="expired_at" id="surplusUpdateExpiredAt"
+                                class="input input-bordered w-full focus:input-warning text-sm" required>
+                        </div>
+
+                    </div>
+
+                    <!-- Modal Footer -->
+                    <div class="p-5 pt-0 flex gap-3">
+                        <button type="button" onclick="document.getElementById('surplusUpdateSlideover').close()"
+                            class="btn btn-ghost flex-1">Cancel</button>
+                        <button type="submit" class="btn btn-warning flex-1 gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M5 13l4 4L19 7" />
+                            </svg>
+                            Update Surplus
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <form method="dialog" class="modal-backdrop">
+                <button>close</button>
+            </form>
+        </dialog>
+
         <!-- ============ MAKE SURPLUS MODAL ============ -->
         <dialog id="surplusSlideover" class="modal modal-bottom sm:modal-middle">
             <div class="modal-box max-w-lg p-0 overflow-hidden">
@@ -648,14 +796,14 @@
                                 <label class="label py-1">
                                     <span class="label-text font-medium text-sm">Pickup Start *</span>
                                 </label>
-                                <input type="datetime-local" name="pickup_start_at"
+                                <input type="time" name="pickup_start_at"
                                     class="input input-bordered w-full focus:input-warning text-sm" required>
                             </div>
                             <div class="form-control">
                                 <label class="label py-1">
                                     <span class="label-text font-medium text-sm">Pickup End *</span>
                                 </label>
-                                <input type="datetime-local" name="pickup_end_at"
+                                <input type="time" name="pickup_end_at"
                                     class="input input-bordered w-full focus:input-warning text-sm" required>
                             </div>
                         </div>
@@ -724,10 +872,108 @@
             </form>
         </dialog>
 
+        <!-- ============ DELETE SURPLUS CONFIRMATION MODAL ============ -->
+        <dialog id="deleteSurplusModal" class="modal">
+            <div class="modal-box max-w-md text-center">
+                <div class="w-16 h-16 bg-warning/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+
+                <h3 class="text-lg font-bold mb-2">Hapus Surplus?</h3>
+
+                <!-- Preview item yang akan dihapus -->
+                <div class="bg-base-200 rounded-xl p-3 flex items-center gap-3 text-left mb-3">
+                    <img id="deleteSurplusImage" src="" alt=""
+                        class="w-12 h-12 rounded-lg object-cover shrink-0">
+                    <div class="min-w-0">
+                        <p id="deleteSurplusName" class="text-sm font-semibold truncate"></p>
+                        <p id="deleteSurplusPrice" class="text-xs text-base-content/50 mt-0.5"></p>
+                    </div>
+                </div>
+
+                <p class="text-sm text-base-content/60 mb-2">
+                    Apakah Anda yakin ingin menghapus surplus ini?
+                </p>
+                <p class="text-xs text-base-content/40 mb-6">Tindakan ini tidak dapat dibatalkan.</p>
+
+                <div class="flex gap-3 justify-center">
+                    <button type="button" onclick="document.getElementById('deleteSurplusModal').close()"
+                        class="btn btn-ghost">Cancel</button>
+
+                    <form id="formDeleteSurplus" method="POST">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn btn-error gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            Hapus Surplus
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <form method="dialog" class="modal-backdrop">
+                <button>close</button>
+            </form>
+        </dialog>
+
     @endsection
 
     @push('scripts')
         <script>
+            // Ambil store_id seller yang login 
+            const storeId = {{ auth()->user()->stores->first()->id }};
+
+            const pusher = new Pusher('{{ env('PUSHER_APP_KEY') }}', {
+                cluster: '{{ env('PUSHER_APP_CLUSTER') }}'
+            });
+
+            const channel = pusher.subscribe(`store.${storeId}.surplus`);
+
+            channel.bind('status.updated', function(data) {
+                updateSurplusCardStatus(data.id, data.status);
+            });
+
+            function updateSurplusCardStatus(surplusId, newStatus) {
+                // Cari badge status di card yang sesuai
+                const badge = document.querySelector(`[data-surplus-id="${surplusId}"] .surplus-status-badge`);
+                if (!badge) return;
+
+                // Map status ke tampilan badge
+                const statusMap = {
+                    active: {
+                        class: 'badge-success',
+                        label: 'Available'
+                    },
+                    sold_out: {
+                        class: 'badge-error',
+                        label: 'Sold Out'
+                    },
+                    expired: {
+                        class: 'badge-ghost',
+                        label: 'Expired'
+                    },
+                };
+
+                const config = statusMap[newStatus];
+                if (!config) return;
+
+                // Reset semua class lama, terapkan yang baru
+                badge.className = `badge badge-xs surplus-status-badge ${config.class}`;
+                badge.textContent = config.label;
+
+                // Visual feedback — flash card border sebentar
+                const card = badge.closest('.card');
+                if (card) {
+                    card.style.outline = '2px solid #f97316';
+                    setTimeout(() => card.style.outline = '', 2000);
+                }
+            }
+
             // ============ TAB SWITCHING ============
             function switchTab(tabName) {
                 // Update tab buttons
@@ -781,6 +1027,55 @@
                 document.getElementById('editActive').checked = isActive;
 
                 modal.showModal();
+            }
+
+            const surplusUpdateUrlTemplate = "{{ route('seller.surplus-update', ':surplusId') }}";
+
+            // ============ SHOW MODAL EDIT SUPRLUS ============
+            function openSurplusEditModal(surplus) {
+                // Set action URL dengan ID surplus
+                const actionUrl = surplusUpdateUrlTemplate.replace(':surplusId', surplus.id);
+                document.getElementById('surplusUpdateForm').action = actionUrl;
+
+                // Preview info (readonly)
+                document.getElementById('surplusUpdateName').textContent = surplus.productName;
+                document.getElementById('surplusUpdatePriceDisplay').textContent = formatRupiah(surplus.initialPrice);
+                document.getElementById('surplusUpdateOriginalPriceDisplay').value = formatRupiah(surplus.initialPrice);
+                document.getElementById('surplusUpdateInitialPrice').value = surplus.initialPrice;
+                document.getElementById('surplusUpdateImage').src = surplus.image;
+
+                // Isi field form
+                document.getElementById('surplusUpdateCurrentPrice').value = surplus.discountPrice;
+                document.getElementById('surplusUpdateQuantity').value = surplus.quantity;
+                document.getElementById('surplusUpdateRemaining').value = surplus.remainingQuantity;
+
+                // Format datetime-local: "2025-05-10T14:30"
+                document.getElementById('surplusUpdatePickupStart').value = toDatetimeLocal(surplus.pickupStart);
+                document.getElementById('surplusUpdatePickupEnd').value = toDatetimeLocal(surplus.pickupEnd);
+                document.getElementById('surplusUpdateExpiredAt').value = toDatetimeLocal(surplus.expiredAt);
+
+                document.getElementById('surplusUpdateSlideover').showModal();
+            }
+
+            // Helper: ubah "2025-05-10 14:30:00" → "2025-05-10T14:30"
+            function toDatetimeLocal(datetimeStr) {
+                if (!datetimeStr) return '';
+                return datetimeStr.replace(' ', 'T').slice(0, 16);
+            }
+
+            const deleteSurplusUrlTemplate = "{{ route('seller.surplus-delete', ':surplusId') }}";
+
+            // ============ SHOW MODAL DELETE SUPRLUS ============
+            function openDeleteSurplusModal(surplus) {
+                const actionUrl = deleteSurplusUrlTemplate.replace(':surplusId', surplus.id);
+                document.getElementById('formDeleteSurplus').action = actionUrl;
+
+                document.getElementById('deleteSurplusName').textContent = surplus.productName;
+                document.getElementById('deleteSurplusPrice').textContent = formatRupiah(surplus.discountPrice) +
+                    ' · stok ' + surplus.remainingQuantity + ' tersisa';
+                document.getElementById('deleteSurplusImage').src = surplus.image;
+
+                document.getElementById('deleteSurplusModal').showModal();
             }
 
             // ============ IMAGE PREVIEW ============

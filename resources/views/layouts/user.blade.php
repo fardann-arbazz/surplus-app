@@ -17,6 +17,8 @@
 
     @include('partials.user.styles')
 
+    @stack('head')
+
     @stack('styles')
 </head>
 
@@ -33,7 +35,7 @@
         </main>
 
         {{-- Cart Drawer --}}
-        @include('partials.user.cart-drawer')
+        {{-- @include('partials.user.cart-drawer') --}}
 
         {{-- Bottom Navigation --}}
         @include('partials.user.mobile-bottom-nav')

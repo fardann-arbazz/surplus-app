@@ -43,16 +43,7 @@ class StoresController extends Controller
         return response()->json($stores);
     }
 
-    public function showDashboard(): View
-    {
-        $user = Auth::user();
-        $store = Stores::where('user_id', $user->id)->first();
-
-        return view('seller.dashboard', [
-            'store' => $store
-        ]);
-    }
-
+   
     public function createStore(CreateStoresRequest $request)
     {
         try {

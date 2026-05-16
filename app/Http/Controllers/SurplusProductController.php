@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\SurplusProduct\CreateSurplusProductRequest;
+use App\Http\Requests\SurplusProduct\UpdateSurplusProductRequest;
 use App\Models\CategoryProducts;
 use App\Models\SurplusProduct;
 use App\Services\SurplusProduct\SurplusProductService;
@@ -48,5 +49,19 @@ class SurplusProductController extends Controller
         $this->surplusProductService->createSurplusProduct($request->validated());
 
         return redirect()->back()->with('success', 'Surplus product berhasil dilakukan!');
+    }
+
+    public function update(string $id, UpdateSurplusProductRequest $request)
+    {
+        $this->surplusProductService->updateSurplusProduct($id, $request->validated());
+
+        return redirect()->back()->with('success', 'Update surplus product berhasil dilakukan!');
+    }
+
+    public function delete(string $id)
+    {
+        $this->surplusProductService->deleteSurplusProduct($id);
+
+        return redirect()->back()->with('success', 'Delete surplus product berhasil dilakukan!');
     }
 }

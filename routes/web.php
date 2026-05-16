@@ -1,14 +1,21 @@
 <?php
 
+use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\Api\MidtransWebhookController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\ResetPasswordController;
+use App\Http\Controllers\Seller\OrderController as SellerOrderController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\Seller\DashboardController as SellerDashboardController;
 use App\Http\Controllers\StoresController;
 use App\Http\Controllers\SurplusProductController;
+use App\Http\Controllers\User\CartController;
+use App\Http\Controllers\User\OrderController as UserOrderController;
+use App\Http\Controllers\User\SurplusDetailController;
 use App\Http\Controllers\UserController;
 use App\Http\Middleware\RedirectIfAuthenticatedByRole;
 use Illuminate\Support\Facades\Route;
@@ -69,6 +76,67 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Stores route for user
     Route::get('/user/nearby-stores', [StoresController::class, 'getNearbyStores'])->name('user.stores-nearby');
 
+    Route::prefix('orders')->name('user.orders.')->group(function () {
+
+        // Daftar order
+        Route::get('/', [UserOrderController::class, 'index'])
+            ->name('index');
+
+        // Halaman checkout (review cart sebelum bayar)
+        Route::get('/checkout', [UserOrderController::class, 'checkoutPage'])
+            ->name('checkout');
+
+        // Proses checkout → buat order + redirect ke payment
+        Route::post('/checkout', [UserOrderController::class, 'checkout'])
+            ->name('checkout.process');
+
+        // Detail order
+        Route::get('/{orderId}', [UserOrderController::class, 'show'])
+            ->name('show');
+
+        // Halaman pembayaran Midtrans Snap
+        Route::get('/{orderId}/payment', [UserOrderController::class, 'paymentPage'])
+            ->name('payment');
+
+        // Halaman form input kode pickup
+        Route::get('/{orderId}/confirm-pickup', [UserOrderController::class, 'confirmPickupPage'])
+            ->name('confirm-pickup');
+
+        // Proses konfirmasi pickup
+        Route::post('/{orderId}/confirm-pickup', [UserOrderController::class, 'confirmPickup'])
+            ->name('confirm-pickup.process');
+    });
+
+    Route::prefix('cart')->name('user.cart.')->group(function () {
+
+        // Tampilkan cart
+        Route::get('/', [CartController::class, 'index'])
+            ->name('index');
+
+        // Tambah item ke cart (dari product detail)
+        Route::post('/', [CartController::class, 'store'])
+            ->name('store');
+
+        // Update quantity
+        Route::patch('/{cartId}', [CartController::class, 'update'])
+            ->name('update');
+
+        // Hapus satu item
+        Route::delete('/{cartId}', [CartController::class, 'destroy'])
+            ->name('destroy');
+
+        // Kosongkan semua cart
+        Route::delete('/', [CartController::class, 'clear'])
+            ->name('clear');
+
+        // Lanjut ke checkout
+        Route::post('/checkout', [CartController::class, 'proceedToCheckout'])
+            ->name('checkout');
+    });
+
+    Route::get('/surplus/{id}', [SurplusDetailController::class, 'show'])
+        ->name('user.surplus.show');
+
     // Seller form regist
     Route::get('/regist-seller', [StoresController::class, 'index'])->name('store.index');
 
@@ -79,17 +147,33 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/notifications/read-all', [DashboardController::class, 'readNotif']);
 
     // Admin Dashboard
-    Route::get('/admin/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard')->middleware('role:admin');
-    Route::get('/admin/seller-management', [DashboardController::class, 'sellerManagement'])->name('admin.seller-management')->middleware('role:admin');
-    Route::patch('/admin/update-status-seller', [DashboardController::class, 'updateStoresStatus'])->name('admin.update-seller-status')->middleware('role:admin');
-    Route::get('/admin/sellers/{id}/detail', [DashboardController::class, 'getDetailStore'])->name('admin.seller.detail');
+    Route::middleware(['role:admin'])->group(function () {
 
-    // Admin Category Management
-    Route::get('/admin/category-management', [CategoryController::class, 'index'])->name('admin.category-management')->middleware('role:admin');
+        Route::get('/admin/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
+        Route::get('/admin/seller-management', [DashboardController::class, 'sellerManagement'])->name('admin.seller-management');
+        Route::patch('/admin/update-status-seller', [DashboardController::class, 'updateStoresStatus'])->name('admin.update-seller-status');
+        Route::get('/admin/sellers/{id}/detail', [DashboardController::class, 'getDetailStore'])->name('admin.seller.detail');
+
+        // Admin Category Management
+        Route::prefix('admin/category')->name('admin.category.')->controller(CategoryController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::patch('/{id}', 'update')->name('update');
+            Route::delete('/{id}', 'destroy')->name('destroy');
+        });
+
+        Route::prefix('admin/users')->name('admin.users.')->controller(AdminUserController::class)->group(function () {
+            Route::get('/',              'index')->name('index');    // GET  /admin/users
+            Route::get('/{id}',          'show')->name('show');     // GET  /admin/users/{id}
+            Route::patch('/{id}/suspend', 'suspend')->name('suspend');  // PATCH /admin/users/{id}/suspend
+            Route::patch('/{id}/activate', 'activate')->name('activate'); // PATCH /admin/users/{id}/activate
+            Route::delete('/{id}',       'destroy')->name('destroy');  // DELETE /admin/users/{id}
+        });
+    });
 
     // Seller Dashboard
     Route::middleware(['role:seller'])->group(function () {
-        Route::get('/seller/dashboard', [StoresController::class, 'showDashboard'])
+        Route::get('/seller/dashboard', [SellerDashboardController::class, 'showDashboard'])
             ->name('seller.dashboard');
 
         Route::get('/seller/menu-management', [ProductController::class, 'index'])
@@ -106,10 +190,29 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::post('/seller/surplus-food', [SurplusProductController::class, 'create'])
             ->name('seller.surplus-create');
+
+        Route::put('/surplus-product/update/{id}', [SurplusProductController::class, 'update'])->name('seller.surplus-update');
+        Route::delete('/surplus-delete/{id}', [SurplusProductController::class, 'delete'])->name('seller.surplus-delete');
+
+        Route::get('/dashboard/chart-data', [SellerDashboardController::class, 'chartData'])->name('seller.dashboard.chart-data');
+
+        Route::prefix('seller/orders')->name('seller.orders.')->group(function () {
+            Route::get('/', [SellerOrderController::class, 'index'])
+                ->name('index');
+
+            // Detail order
+            Route::get('/{orderId}', [SellerOrderController::class, 'show'])
+                ->name('show');
+
+            // Tandai siap diambil 
+            Route::patch('/{orderId}/ready', [SellerOrderController::class, 'markReady'])
+                ->name('ready');
+        });
     });
 });
 
 
+Route::post('midtrans/webhook', [MidtransWebhookController::class, 'handle']);
 
 // Testing mailer 
 // Route::get('/test-mail', function () {

@@ -24,7 +24,6 @@ class UpdateCategoryRequest extends FormRequest
     {
         return [
             'name' => ['nullable', 'string', 'max:150'],
-
         ];
     }
 }

@@ -1,4 +1,3 @@
-{{-- resources/views/partials/user/home-scripts.blade.php --}}
 <script>
     // ──────────────────────────────────────────────────────
     // Home Page JS - Nearby Stores & Recommended Menus
@@ -80,7 +79,6 @@
         // ── Init ──────────────────────────────────────────
         function init() {
             initDOM();
-            console.log('HomeApp init');
 
             // Listen for location ready dari LocationPicker
             document.addEventListener('locationReady', function() {
@@ -143,13 +141,11 @@
         }
 
         function showHomeContent() {
-            console.log('Showing home content');
             if (DOM.waitingLocation) DOM.waitingLocation.classList.add('hidden');
             if (DOM.homeContent) DOM.homeContent.classList.remove('hidden');
         }
 
         function showWaitingLocation() {
-            console.log('Showing waiting location');
             if (DOM.waitingLocation) DOM.waitingLocation.classList.remove('hidden');
             if (DOM.homeContent) DOM.homeContent.classList.add('hidden');
 
@@ -162,7 +158,6 @@
 
         // ── Load All Data ────────────────────────────────
         function loadAllData() {
-            console.log('Loading all data...');
             fetchNearbyStores(false);
             fetchRecommendedMenus(false);
         }
@@ -190,8 +185,6 @@
                 limit: 8,
             });
 
-            console.log('Fetching stores...', params.toString());
-
             fetch(API.nearbyStores + '?' + params.toString(), {
                     headers: {
                         'Accept': 'application/json',
@@ -213,6 +206,7 @@
                                     showWaitingLocation();
                                     return null; // Stop disini
                                 }
+
                                 // Auth issue - jangan block, return empty
                                 console.warn('Stores fetch forbidden');
                                 return {
@@ -272,8 +266,8 @@
                 rating: parseFloat(store.rating || store.average_rating || 0).toFixed(1),
                 category: (store.category && store.category.name) ? store.category.name : 'Restaurant',
                 time: store.opening_hours || '09:00 - 21:00',
-                status: store.is_open ? 'Open' : 'Closed',
-                statusClass: store.is_open ? 'badge-success' : 'badge-error',
+                status: store.is_online ? 'Open' : 'Closed',
+                statusClass: store.is_online ? 'badge-success' : 'badge-error',
                 promo: store.promo_text || null,
             };
         }
@@ -308,9 +302,7 @@
                              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                              loading="lazy"
                              onerror="this.src='/images/placeholder-store.png'" />
-                        <div class="absolute top-3 left-3 badge badge-ghost bg-white/90 text-xs font-semibold text-warning truncate">
-                            📍 ${store.address}
-                        </div>
+                      
                         ${promoHTML}
                     </figure>
                     <div class="card-body p-4">
@@ -321,9 +313,10 @@
                                 <span class="font-medium">${store.rating}</span>
                             </div>
                         </div>
-                        <p class="text-xs text-base-content/60 mb-3">${cat}</p>
+                        <p class="text-xs text-base-content/60">${cat}</p>
+                        <hr class="border border-slate-50 my-1"/>
                         <div class="card-actions justify-between items-center">
-                            <span class="text-xs text-base-content/50">🕐 ${store.time}</span>
+                            <span class="text-xs text-base-content/50 truncate">${store.address}</span>
                             <span class="badge ${store.statusClass} badge-sm text-xs">${store.status}</span>
                         </div>
                     </div>
@@ -503,30 +496,32 @@
 
                 html += `
                 <div class="card bg-base-100 border border-base-200 shadow-sm hover:shadow-md transition-all overflow-hidden group cursor-pointer"
-                     onclick="navigateToSurplus(${menu.surplusId})">
+                     onclick="navigateToSurplus(${menu.id})">
                     <figure class="relative h-36 lg:h-44">
                         <img src="${menu.image}" 
                              alt="${name}"
                              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                              loading="lazy"
                              onerror="this.src='/images/placeholder-food.png'" />
-                        <button onclick="event.stopPropagation(); addToCartGlobal(${menu.id}, {id: ${menu.id}, name: '${name.replace(/'/g, "\\'")}', price: ${menu.rawDiscountPrice}, image: '${menu.image}', storeName: '${restaurant.replace(/'/g, "\\'")}'})"
-                            class="absolute top-2 right-2 btn btn-circle btn-sm bg-white shadow-md text-warning hover:bg-warning hover:text-warning-content border-0">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                            </svg>
-                        </button>
                         ${discountHTML}
                     </figure>
                     <div class="card-body p-3">
                         <h3 class="card-title text-sm mb-1 truncate">${name}</h3>
                         <p class="text-xs text-base-content/60 mb-2 truncate">📍 ${restaurant}</p>
                         <div class="card-actions justify-between items-center">
-                            <div>
+                            <divore.category.name) ? store.category.name : 'Restaurant',
+                time: store.opening_hours || '09:00 - 21:00',
+                status: store.is_online ? 'Open' : 'Closed',
+                statusClass: store.is_online ? 'badge-success' : 'badge-error',
+                promo: store.promo_text || null,
+            };
+        }
+
+        function renderStores(stores) {
+            if (!DOM.storesGrid) return;>
                                 <span class="text-sm font-bold text-warning">${menu.price}</span>
                                 ${originalPriceHTML}
-                            </div>
+                            </divore.category.name>
                             <div class="flex items-center gap-1 text-xs">
                                 <span class="text-yellow-500">⭐</span>
                                 <span class="text-base-content/50">${menu.rating}</span>
@@ -547,6 +542,11 @@
                 }
             }
         }
+
+        // ── Surplus Detail ──────────────────────────────
+        window.navigateToSurplus = function(id) {
+            window.location.href = `/surplus/${id}`;
+        };
 
         // ── Skeleton Helpers ──────────────────────────────
         function showSkeleton(type) {
@@ -621,7 +621,7 @@
         };
     })();
 
-    // 🔥 Initialize
+    // Initialize
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() {
             console.log('DOM ready, initializing HomeApp...');

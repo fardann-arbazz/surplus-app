@@ -18,9 +18,9 @@ return new class extends Migration
             $table->integer('discount_price');
             $table->integer('quantity');
             $table->integer('remaining_quantity');
-            $table->date('expired_at');
-            $table->date('pickup_start_at');
-            $table->date('pickup_end_at');
+            $table->dateTime('expired_at');
+            $table->dateTime('pickup_start_at');
+            $table->dateTime('pickup_end_at');
             $table->enum('status', ['active', 'sold_out', 'expired']);
 
             $table->foreign('product_id')->references('id')->on('products')->onDelete('cascade');

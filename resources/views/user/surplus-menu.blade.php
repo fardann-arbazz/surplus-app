@@ -13,11 +13,32 @@
                     <h1 class="text-lg font-bold truncate">Surplus Terdekat</h1>
                     <p class="text-xs text-base-content/50 truncate">Makanan segar, harga hemat, selamatkan bumi 🌍</p>
                 </div>
+
+                @auth
+                    <a href="{{ route('user.cart.index') }}" class="btn btn-ghost btn-sm btn-circle relative ml-2 shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 3h2l.4 2M7 13h10l4-10H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        @php
+                            $cartCount = auth()->check()
+                                ? app(\App\Services\Cart\CartService::class)->getCount(auth()->user())
+                                : 0;
+                        @endphp
+                        @if ($cartCount > 0)
+                            <span
+                                class="absolute -top-0.5 -right-0.5 bg-orange-500 text-white text-[10px]
+                             font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                                {{ $cartCount > 9 ? '9+' : $cartCount }}
+                            </span>
+                        @endif
+                    </a>
+                @endauth
             </div>
         </div>
 
         {{-- STATE 1: WAITING LOCATION --}}
-        <div id="stateWaiting" class="flex flex-col items-center justify-center min-h-[60vh] px-4 hidden">
+        <div id="stateWaiting" class="flex-col items-center justify-center min-h-[60vh] px-4 flex">
             <div class="w-24 h-24 rounded-full bg-warning/10 flex items-center justify-center mb-6 animate-pulse">
                 <svg class="w-12 h-12 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -52,7 +73,7 @@
                     <span class="text-sm text-base-content/60 whitespace-nowrap">Radius</span>
                     <input type="range" min="1" max="20" step="1" value="5" id="radiusSlider"
                         class="range range-warning range-sm flex-1" oninput="onRadiusChange(this.value)">
-                    <span class="text-sm font-medium min-w-[45px] text-right" id="radiusVal">5 km</span>
+                    <span class="text-sm font-medium min-w-11.25 text-right" id="radiusVal">5 km</span>
                 </div>
             </div>
 
@@ -84,7 +105,7 @@
                     <div class="flex gap-2 overflow-x-auto pb-1 scrollbar-hide flex-1 mr-2" id="categoryChipsActive">
                         {{-- Rendered by JS --}}
                     </div>
-                    <button onclick="refreshData()" class="btn btn-ghost btn-sm btn-circle flex-shrink-0" title="Refresh">
+                    <button onclick="refreshData()" class="btn btn-ghost btn-sm btn-circle shrink-0" title="Refresh">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -96,7 +117,7 @@
                     <input type="range" min="1" max="20" step="1" value="5"
                         id="radiusSliderActive" class="range range-warning range-sm flex-1"
                         oninput="onRadiusChange(this.value)">
-                    <span class="text-sm font-medium min-w-[45px] text-right" id="radiusValActive">5 km</span>
+                    <span class="text-sm font-medium min-w-11.25 text-right" id="radiusValActive">5 km</span>
                 </div>
                 {{-- Result count --}}
                 <p class="text-xs text-base-content/40 mt-2" id="resultCount"></p>
@@ -117,7 +138,7 @@
         </div>
 
         {{-- STATE 4: ERROR --}}
-        <div id="stateError" class="flex flex-col items-center justify-center min-h-[60vh] px-4 hidden">
+        <div id="stateError" class="flex-col items-center justify-center min-h-[60vh] px-4 flex">
             <div class="w-24 h-24 rounded-full bg-error/10 flex items-center justify-center mb-6">
                 <svg class="w-12 h-12 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -147,7 +168,7 @@
         </div>
 
         {{-- STATE 5: EMPTY --}}
-        <div id="stateEmpty" class="flex flex-col items-center justify-center min-h-[60vh] px-4 hidden">
+        <div id="stateEmpty" class="flex-col items-center justify-center min-h-[60vh] px-4 flex">
             <div class="w-24 h-24 rounded-full bg-warning/10 flex items-center justify-center mb-6">
                 <svg class="w-12 h-12 text-warning/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -647,9 +668,7 @@
 
         // ── Product Detail Navigation ──────────────────────────
         function openProductDetail(id) {
-            // Optional: navigate to detail page
-            // window.location.href = `/surplus/${id}`;
-            console.log('Open product:', id);
+            window.location.href = `/surplus/${id}`;
         }
 
         // ── Helpers ────────────────────────────────────────────

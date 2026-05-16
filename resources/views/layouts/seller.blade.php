@@ -44,6 +44,8 @@
 
     </div>
 
+    <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
+
     @stack('scripts')
 
 </body>

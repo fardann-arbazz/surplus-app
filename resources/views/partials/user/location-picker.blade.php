@@ -121,9 +121,6 @@
             <div class="shrink-0 px-5 py-4 border-t border-base-200 bg-base-100">
                 <button id="confirmLocationBtn" onclick="LocationPicker.confirm()"
                     class="btn btn-warning w-full gap-2 text-base font-semibold h-12">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                    </svg>
                     Konfirmasi Lokasi
                 </button>
                 <button id="cancelLocationBtn" onclick="LocationPicker.close()"
